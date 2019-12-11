@@ -1,0 +1,39 @@
+{
+	"vue with typescript": {
+		"prefix": "vue",
+		"body": [
+			"<template>" ,
+			"\t<div>",
+			"",
+			"\t</div>",
+			"</template>",
+			"",
+			"<script lang=\"ts\">",
+			"import { Component, Prop, Watch, Vue } from 'vue-property-decorator';",
+			"",
+			"@Component({components:{  }})",
+			"export default class ${TM_FILENAME_BASE} extends Vue {",
+			"\tmounted () {",
+			"",
+			"\t}",
+			"}",
+			"</script>",
+		],
+		"description": "Vue文件"
+	} ,
+
+	"vuex module with typescript": {
+		"prefix": "vuex-module",
+		"body": [
+			"import { Module, VuexModule, Mutation, Action } from 'vuex-module-decorators'" ,
+			"",
+			"@Module({namespaced: true})",
+			"export default class ${TM_FILENAME_BASE} extends VuexModule {",
+			"\t" ,
+			"}"
+		],
+		"description": "vuex module文件"
+	} ,
+
+
+}

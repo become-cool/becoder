@@ -1,0 +1,57 @@
+{
+	"name": "becoder",
+	"displayName": "becoder",
+	"description": "be a coder? cool!",
+	"version": "0.0.1",
+	"engines": {
+		"vscode": "^1.40.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"activationEvents": [
+		"onCommand:extension.openMainUI",
+		"*:extension.openMainUI"
+	],
+	"main": "./dist/extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "extension.openMainUI",
+				"title": "becoder"
+			}
+		],
+		"menus": {
+			"explorer/context": [
+				{
+					"command": "extension.openMainUI",
+					"group": "navigation"
+				}
+			],
+			"editor/title": [
+				{
+					"command": "extension.openMainUI",
+					"group": "navigation"
+				}
+			]
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./"
+	},
+	"devDependencies": {
+		"@types/glob": "^7.1.1",
+		"@types/node": "^12.11.7",
+		"@types/vscode": "^1.40.0",
+		"glob": "^7.1.5",
+		"mocha": "^6.2.2",
+		"typescript": "^3.6.4",
+		"tslint": "^5.20.0"
+	},
+	"dependencies": {
+		"@types/serialport": "^7.0.4",
+		"serialport": "^8.0.5"
+	}
+}
