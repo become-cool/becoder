@@ -11,6 +11,8 @@
 	],
 	"activationEvents": [
 		"onCommand:extension.openMainUI",
+		"onCommand:extension.runScript",
+		"onCommand:extension.uploadScript",
 		"*:extension.openMainUI"
 	],
 	"main": "./dist/extension.js",
@@ -19,12 +21,56 @@
 			{
 				"command": "extension.openMainUI",
 				"title": "becoder"
+			},
+			{
+				"command": "extension.runScript",
+				"title": "run in WiFi block"
+			},
+			{
+				"command": "extension.uploadScript",
+				"title": "upload in WiFi block"
 			}
 		],
 		"menus": {
 			"explorer/context": [
 				{
 					"command": "extension.openMainUI",
+					"group": "navigation"
+				},
+				{
+					"command": "extension.runScript",
+					"group": "navigation"
+				},
+				{
+					"command": "extension.uploadScript",
+					"group": "navigation"
+				}
+			],
+			"editor/context": [
+				{
+					"command": "extension.openMainUI",
+					"group": "navigation"
+				},
+				{
+					"command": "extension.runScript",
+					"group": "navigation"
+				},
+				{
+					"command": "extension.uploadScript",
+					"group": "navigation"
+				}
+			],
+			"editor/title/context": [
+				{
+					"command": "extension.openMainUI",
+					"group": "navigation"
+				},
+				{
+					"command": "extension.runScript",
+					"group": "navigation"
+				},
+				{
+					"command": "extension.uploadScript",
 					"group": "navigation"
 				}
 			],
@@ -52,6 +98,8 @@
 	},
 	"dependencies": {
 		"@types/serialport": "^7.0.4",
-		"serialport": "^8.0.5"
+		"regenerator": "^0.14.2",
+		"serialport": "^8.0.5",
+		"uglify-js": "^3.7.2"
 	}
 }

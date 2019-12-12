@@ -1,19 +1,17 @@
 <template>
   <div id="app" lfttop="window" rgtbtm="window">
     <Connection lfttop="parent" rgttop="parent" />
-    <Console/>
+    <Console lfttop="prev.lftbtm" rgtbtm="parent" />
   </div>
 </template>
 
-<script lang="ts">
-import { Component, Vue } from 'vue-property-decorator';
+<script>
 import Console from './components/Console.vue';
 import Connection from './components/Connection.vue';
 
-@Component({
+export default {
   components: {
     Console, Connection
   },
-})
-export default class App extends Vue {}
+}
 </script>

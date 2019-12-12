@@ -1,33 +1,45 @@
 <template>
     <div>
-        <div ref="terminal"></div>
+        <div ref="terminal" lfttop rgtbtm></div>
     </div>
 </template>
 
-<script lang="ts">
-import { Component, Prop, Vue } from 'vue-property-decorator';
+<script>
 
-declare var $: any 
+function array2string(array) {
+    var string = ""
+    for(var char of array) {
+        string+= String.fromCharCode(char)
+    }
+    return string
+}
 
-@Component
-export default class Console extends Vue {
-
-    private $terminal: any 
+export default {
 
     mounted() {
-        this.$terminal = $(this.$refs.terminal).terminal(function(command) {
-            this.echo(command)
+        const self = this
+        this.$terminal = window.$(this.$refs.terminal).terminal(function(command) {
+
+            if( !self.$state.usb.active.isOpen ) {
+                this.echo("Not connected to dev yet")
+                return
+            }
+            
+            // this.echo(command)
             if (command) {
-                this.$bus.invoke('serial', 'write', command)
+                self.$bus.invoke('serial', 'write', command+"\n")
             }
         }, {
             greetings: 'JavaScript Interpreter',
             height: "100%" ,
-            prompt: 'js> '
+            prompt: "JS> "
         })
 
-        this.$bus.on("usb-data", (data:any)=>{
-            this.$terminal.echo(data)
+        this.$bus.on("usb-data", (msg)=>{
+            this.$terminal.echo(array2string(msg.data.data))
+        })
+        this.$bus.on("echo", (msg)=>{
+            this.$terminal.echo(msg.data)
         })
     }
 }

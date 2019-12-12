@@ -1,12 +1,13 @@
-window.$ = jQuery
-window.vscode = acquireVsCodeApi()
+window.$ = window.jQuery
+var vscode = acquireVsCodeApi()
+window.vscode = vscode 
 
-$(function() {
-    vscode.postMessage({cmd: 'ready'})
+window.$(function() {
+    vscode.postMessage({cmd: 'init'})
 })
 
 
-window.addEventListener('message', event => {
+window.addEventListener('message', function (event) {
     if( event.data.cmd == 'init' ) {
         init(event.data)
     }
@@ -20,28 +21,33 @@ window.addEventListener('message', event => {
     }
 
     else {
-        $bus.emit(event.data.cmd, event.data)
+        window.$bus.emit(event.data.cmd, event.data)
     }
 })
 
 
 function init(data) {
-    $("img").each(function(){
-        var src = $(this).attr("src")
+    window.$state.usb.active = data.usb.active
+    window.$state.usb.list = data.usb.list
+
+    window.$("img").each(function(){
+        var src = window.$(this).attr("src")
         if(src[0]=='/') {
             var newsrc = "vscode-resource:/" + data.root + "/" + src
-            $(this).attr("src", newsrc) 
+            window.$(this).attr("src", newsrc) 
         }
     })
+
+    vscode.postMessage({cmd: 'ready'})
 }
 
 var invokeId = 0 ;
 var pendingInvoke = {}
 
 window.$bus = {
-    __proto__:  new EventEmitter() ,
+    __proto__:  new window.EventEmitter() ,
 
-    invoke(objName, methodName, ...argv) {
+    invoke: function(objName, methodName, ...argv) {
         var vid = invokeId++
         vscode.postMessage({ cmd: "invoke", object: objName, method: methodName, argv, invokeid: vid })
         return new Promise(resolve=> pendingInvoke[vid] = resolve)
@@ -50,10 +56,12 @@ window.$bus = {
 
 window.$state = {
     usb: {
-        list: [] ,
+        list: [{path:"xxx"}] ,
         active: {
             path: "" ,
             isOpen: false
         }
-    }
+    } ,
+
+    xxxx: "xxxx"
 }

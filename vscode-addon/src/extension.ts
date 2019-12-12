@@ -2,13 +2,21 @@ import * as vscode from 'vscode';
 import { WebviewPanel } from 'vscode';
 const fs = require("fs")
 const path = require("path")
+import { Compiler } from './compiler';
+
+
 
 import * as Serial from 'serialport'
+import { resolve } from 'dns';
+
+const compiler = new Compiler()
 
 // const Serial = require('serialport')
 class SerialManager {
 
 	activeDev?: Serial 
+
+	_list = []
 
 	open(path: string) {
 		console.log("open usb",path)
@@ -26,6 +34,7 @@ class SerialManager {
 			}
 		})
 		this.activeDev.on("data", (data)=>{
+			console.log("<<",data)
 			panel!.webview.postMessage({cmd: "usb-data", data})
 		})
 		this.activeDev.on("close", ()=>{
@@ -38,15 +47,16 @@ class SerialManager {
 	}
 
 	close() {
-		this.activeDev!.close()
+		this.activeDev && this.activeDev.close()
 	}
 
 	write(data: string|[]) {
-		this.activeDev!.write(data)
+		this.activeDev && this.activeDev.write(data)
 	}
 	
-	list() {
-		return Serial.list()
+	async list() {
+		this._list = (await Serial.list()) as []
+		return this._list
 	}
 
 
@@ -61,68 +71,165 @@ export function activate(context: vscode.ExtensionContext) {
 		
 		if(!panel) {
 			console.log("new pannel")
-			panel = createWebviewPanel(context)
+			createWebviewPanel(context)
 		}
 		else {
 			console.log("old pannel")
 			panel.reveal() ;
 		}
 	}))
+
+	context.subscriptions.push(vscode.commands.registerCommand('extension.runScript', (item)=>{
+		update(item.fsPath, context, false)
+	}))
+	context.subscriptions.push(vscode.commands.registerCommand('extension.uploadScript', function (item) {
+		update(item.fsPath, context, true)
+	}))
+
 }
 
+async function update(scriptPath:string, context: vscode.ExtensionContext, save: boolean) {
+	
+	if(!panel) {
+		console.log("new pannel")
+		await createWebviewPanel(context)
+	}
+
+	console.log(scriptPath)
+	panel && panel.webview.postMessage({cmd:"echo", data: "compile script "+scriptPath+" ..."})
+
+	var res = await compiler.compile(scriptPath)
+	if(!res.suc) {
+		var msg = `
+compile failed: ${res.error.message}
+file: ${res.error.filename}
+line: ${res.error.line}, col: ${res.error.col}
+${res.error.context}
+`
+
+		panel && panel.webview.postMessage({cmd:"echo", data: msg})
+		return
+
+	}
+	
+	var code = res.code
+
+	if(save) {
+		code+= "; save();"
+	}
+	
+	code+="\n"
+
+	panel && panel.webview.postMessage({cmd:"echo", data: "writing script to WiFi block ... ..."})
+
+	if( !serialMgr.activeDev || !serialMgr.activeDev.isOpen ) {
+		panel && panel.webview.postMessage({cmd:"echo", data: "Not connected to a device yet"})
+		return
+	}
+
+	serialMgr.activeDev.write("reset()\n")
+	await sleep(1000)
+
+	if( await usbWrite(serialMgr.activeDev, code) ){
+
+		panel && panel.webview.postMessage({cmd:"echo", data: "Write done"})
+
+		serialMgr.activeDev.flush()
+	}
+}
+
+
+function _usbWriteChunk(dev: Serial, chunk: any) {
+	return new Promise(resolve=>{
+		dev.write(chunk, (err)=>{
+			resolve(!err)
+		})
+	})
+}
+const CHUNKLEN = 1024
+async function usbWrite(dev: Serial, data: any) {
+	// console.log("total script length>>",data.length)
+	while( data.length ) {
+		var chunklen = (data.length>CHUNKLEN)? CHUNKLEN: data.length
+		var chunk = data.substr(0, chunklen)
+
+		// console.log("chunk>>",chunklen)
+
+		if(! await _usbWriteChunk(dev, chunk)) {
+			return false
+		}
+		data = data.substr(chunklen)
+	}
+	return true
+}
+
+
+function sleep(ms:number) {
+	return new Promise(resolve=>setTimeout(resolve, ms))
+}
 
 var bindObjects: {[key:string]:any} = {
 	serial: serialMgr
 }
 
-function createWebviewPanel (context: vscode.ExtensionContext): WebviewPanel {
-	panel = vscode.window.createWebviewPanel(
-		'testWebview', // viewType
-		"WebView演示", // 视图标题
-		vscode.ViewColumn.One, // 显示在编辑器的哪个部位
-		{
-			enableScripts: true, // 启用JS，默认禁用
-			retainContextWhenHidden: true, // webview被隐藏时保持状态，避免被重置
-		}
-	);
-	let html = getWebViewContent(context, "dist/webview/index.html")
-	panel.webview.html = html
-	
-	panel.webview.onDidReceiveMessage(message => {
-		if(message.cmd=='ready') {
-			panel && panel.webview.postMessage({
-				cmd:"init", 
-				root: context.extensionPath+"/dist/webview" ,
-				usb: {
-					path: serialMgr.activeDev!.path ,
-					isOpen: !!(serialMgr.activeDev!.isOpen)
-				}
-			})
-		}
+function createWebviewPanel (context: vscode.ExtensionContext) {
+	return new Promise((resolve:any)=>{
 
-		else if(message.cmd=='invoke') {
-			var ret = bindObjects[ message.object ][ message.method ] (...(message.argv||[]))
-			if( ret instanceof Promise) {
-				ret.then((ret: any)=>{
-					panel && panel.webview.postMessage({cmd:"invoke-return", invokeid: message.invokeid, ret})
+		panel = vscode.window.createWebviewPanel(
+			'becoder',
+			"Be a coder? cool!",
+			vscode.ViewColumn.Beside,
+			{
+				enableScripts: true, // 启用JS，默认禁用
+				retainContextWhenHidden: true, // webview被隐藏时保持状态，避免被重置
+			}
+		);
+		let html = getWebViewContent(context, "dist/webview/index.html")
+		panel.webview.html = html
+
+		
+		panel.webview.onDidReceiveMessage(message => {
+			if(message.cmd=='init') {
+				panel && panel.webview.postMessage({
+					cmd:"init", 
+					root: context.extensionPath+"/dist/webview" ,
+					usb: {
+						list: serialMgr._list ,
+						active: {
+							path: serialMgr.activeDev && serialMgr.activeDev.path ,
+							isOpen: !!(serialMgr.activeDev && serialMgr.activeDev.isOpen)
+						}
+					}
 				})
 			}
-			else {
-				panel && panel.webview.postMessage({cmd:"invoke-return", invokeid: message.invokeid, ret})
+
+			else if(message.cmd=="ready") {
+				resolve(panel)
 			}
-		}
-
-	}, undefined, context.subscriptions);
-
-
-	panel.onDidDispose(
-		() => {
-			panel = undefined;
-		},
-		null,
-		context.subscriptions
-	)
-	return panel
+	
+			else if(message.cmd=='invoke') {
+				var ret = bindObjects[ message.object ][ message.method ] (...(message.argv||[]))
+				if( ret instanceof Promise) {
+					ret.then((ret: any)=>{
+						panel && panel.webview.postMessage({cmd:"invoke-return", invokeid: message.invokeid, ret})
+					})
+				}
+				else {
+					panel && panel.webview.postMessage({cmd:"invoke-return", invokeid: message.invokeid, ret})
+				}
+			}
+	
+		}, undefined, context.subscriptions);
+	
+	
+		panel.onDidDispose(
+			() => {
+				panel = undefined;
+			},
+			null,
+			context.subscriptions
+		)
+	})
 }
 
 function getExtensionFileVscodeResource (context: vscode.ExtensionContext, relativePath:string) {
