@@ -68,6 +68,9 @@ export class Compiler {
             },
             output: {
                 beautify: false
+            },
+            compress: {
+                typeofs: false
             }
         })
 
