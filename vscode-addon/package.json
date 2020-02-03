@@ -1,8 +1,9 @@
 {
 	"name": "becoder",
+	"publisher": "become",
 	"displayName": "becoder",
-	"description": "be a coder? cool!",
-	"version": "0.0.1",
+	"description": "Be a coder? cool!",
+	"version": "0.0.2",
 	"engines": {
 		"vscode": "^1.40.0"
 	},
@@ -101,5 +102,6 @@
 		"regenerator": "^0.14.2",
 		"serialport": "^8.0.5",
 		"uglify-js": "^3.7.2"
-	}
+	},
+	"repository": "git@code.aliyun.com:become/becoder.git"
 }

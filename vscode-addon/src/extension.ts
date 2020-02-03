@@ -19,7 +19,7 @@ class SerialManager {
 	_list = []
 
 	open(path: string) {
-		console.log("open usb",path)
+		console.log("open serial",path)
 		if(!panel)
 			return
 		if(this.activeDev){
@@ -34,7 +34,7 @@ class SerialManager {
 			}
 		})
 		this.activeDev.on("data", (data)=>{
-			console.log("<<",data)
+			// console.log("<<",data)
 			panel!.webview.postMessage({cmd: "usb-data", data})
 		})
 		this.activeDev.on("close", ()=>{
@@ -80,19 +80,24 @@ export function activate(context: vscode.ExtensionContext) {
 	}))
 
 	context.subscriptions.push(vscode.commands.registerCommand('extension.runScript', (item)=>{
-		update(item.fsPath, context, false)
+		upload(item.fsPath, context, false)
 	}))
 	context.subscriptions.push(vscode.commands.registerCommand('extension.uploadScript', function (item) {
-		update(item.fsPath, context, true)
+		upload(item.fsPath, context, true)
 	}))
 
 }
 
-async function update(scriptPath:string, context: vscode.ExtensionContext, save: boolean) {
+async function upload(scriptPath:string, context: vscode.ExtensionContext, save: boolean) {
 	
 	if(!panel) {
 		console.log("new pannel")
 		await createWebviewPanel(context)
+	}
+	
+	if( !serialMgr.activeDev || !serialMgr.activeDev.isOpen ) {
+		panel && panel.webview.postMessage({cmd:"echo", data: "Not connected to a device yet"})
+		return
 	}
 
 	console.log(scriptPath)
@@ -115,26 +120,20 @@ ${res.error.context}
 	var code = res.code
 
 	if(save) {
+		
+		serialMgr.activeDev.write("reset()\n")
+		await sleep(1000)
+
 		code+= "; save();"
 	}
-	
 	code+="\n"
 
-	panel && panel.webview.postMessage({cmd:"echo", data: "writing script to WiFi block ... ..."})
-
-	if( !serialMgr.activeDev || !serialMgr.activeDev.isOpen ) {
-		panel && panel.webview.postMessage({cmd:"echo", data: "Not connected to a device yet"})
-		return
-	}
-
-	serialMgr.activeDev.write("reset()\n")
-	await sleep(1000)
+	panel && panel.webview.postMessage({cmd:"echo", data: "writing script to WiFi part ... ..."})
 
 	if( await usbWrite(serialMgr.activeDev, code) ){
 
 		panel && panel.webview.postMessage({cmd:"echo", data: "Write done"})
-
-		serialMgr.activeDev.flush()
+		
 	}
 }
 
@@ -142,23 +141,27 @@ ${res.error.context}
 function _usbWriteChunk(dev: Serial, chunk: any) {
 	return new Promise(resolve=>{
 		dev.write(chunk, (err)=>{
+			if(err) console.log("err:", err)
 			resolve(!err)
 		})
 	})
 }
-const CHUNKLEN = 1024
+const CHUNKLEN = 64
 async function usbWrite(dev: Serial, data: any) {
-	// console.log("total script length>>",data.length)
+	console.log("total script length>>",data.length)
 	while( data.length ) {
 		var chunklen = (data.length>CHUNKLEN)? CHUNKLEN: data.length
 		var chunk = data.substr(0, chunklen)
 
-		// console.log("chunk>>",chunklen)
+		console.log("chunk>>",chunklen)
 
 		if(! await _usbWriteChunk(dev, chunk)) {
 			return false
 		}
+
 		data = data.substr(chunklen)
+
+		await sleep(10)
 	}
 	return true
 }

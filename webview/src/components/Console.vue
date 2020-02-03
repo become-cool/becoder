@@ -40,6 +40,12 @@ export default {
         })
         this.$bus.on("echo", (msg)=>{
             this.$terminal.echo(msg.data)
+        })   
+        this.$bus.on("usb-open", ()=>{
+            this.$terminal.echo("已经通过USB连接到设备.")
+        })   
+        this.$bus.on("usb-close", ()=>{
+            this.$terminal.echo("设备已经从USB上断开.")
         })
     }
 }

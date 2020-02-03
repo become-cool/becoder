@@ -50,8 +50,11 @@ export class Compiler {
 
         var source = fs.readFileSync(scriptPath)
         var res = regenerator.compile(source)
-
-        var code = runtimecode + res.code 
+        
+        var code = res.code 
+        // 加入 async/await runtime
+        if(code.match("regeneratorRuntime"))
+            code = runtimecode + code
         
         var tmpFile1 = scriptPath+".~~tmp1"
         fs.writeFileSync(tmpFile1, code)

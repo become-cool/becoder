@@ -7,13 +7,16 @@
             </select>
             <button @click="refreshSerialPorts">刷新</button>
 
-            <button v-show="!usb.active.isOpen" @click="connectSerialPort" style="color:green">连接</button>
+            <button v-show="!usb.active.isOpen" :disabled="!usb.active.path" @click="connectSerialPort" style="color:green">连接</button>
             <button v-show="usb.active.isOpen" @click="closeSerialPort" style="color:red">断开</button>
         </div>
 
-        <div style="width: 200px" rgt=":-10">
+        <div style="width: 400px" rgt=":-10">
+            <button :disabled="!usb.active.isOpen" @click="runInWiFi(`require('Wifi').getIP()`)">IP</button>
+            <button :disabled="!usb.active.isOpen" @click="runInWiFi(`require('Wifi').getStatus()`)">Wifi Status</button>
             <button :disabled="!usb.active.isOpen" @click="runInWiFi('process.memory()')">Memory</button>
             <button :disabled="!usb.active.isOpen" @click="runInWiFi('reset()')">Reset</button>
+            <button :disabled="!usb.active.isOpen" @click="runInWiFi(`require('ESP8266').reboot()`)">Reboot</button>
         </div>
     </div>
 </template>
@@ -39,6 +42,7 @@ export default {
         })
         this.$bus.on("usb-error", ()=>{
             console.log("usb-error")
+            this.refreshSerialPorts()
         })
     } ,
 
